@@ -53,11 +53,7 @@ try:
 			pid = PID.PID(pwm, i2c)
 			pid.position(location)
 
-
-
-
 		value = range_check(value)
-
 		pwm.DC(value)
 
 		screen.clear()
@@ -70,26 +66,13 @@ try:
 
 		#screen.addstr(str(key))
 
-
 except Exception as e:
 	curses.endwin()
+	pwm.cleanup()
 	raise
-
 
 curses.endwin()
 pwm.cleanup()
-
-def range_check(value):
-	if value > 100:
-		value = 100
-	elif value < 0:
-		value = 0
-	return value
-
-
-
-
-
 
 # import click
 

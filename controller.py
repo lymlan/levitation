@@ -1,5 +1,6 @@
 import RPi.GPIO as GPIO
 
+
 class PWM(object):
 	def __init__(self):
 		GPIO.setmode(GPIO.BOARD)
