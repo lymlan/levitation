@@ -23,7 +23,7 @@ class Calibrate(object):
 		return v_min
 
 	def top(self):
-		self.pwm.DC(75)
+		self.pwm.DC(100)
 		time.sleep(2)
 		v_min = self.i2c.getVoltage()
 		self.pwm.DC(0)

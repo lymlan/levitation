@@ -13,27 +13,26 @@ class PID(object):
 		error_past = 0
 		Integral = 0
 		location = np.zeros(1000)
-
+                G = 0
+                peak_limit = 100
 		while i < 1000:
 			location[i] = self.i2c.getVoltage()
 			error = (location[i] - initial_position)/ initial_position
 
-			KP = 22.99
-			KI = 10.83
-			KD = 126
+			KP = 10.99
+			KI = 123
+			KD = 200
 
 			V = error - error_past
 			D = KD * V
 
 			P = error * KP
-
-			Integral += error 
-			I = Integral * KI
+                        if G != peak_limit:
+			    Integral += error
+			    I = Integral * KI
 
 			G = P + I + D
 
-
-			peak_limit = 85
 			if G > peak_limit:
 				G = peak_limit
 			elif G < 0:
