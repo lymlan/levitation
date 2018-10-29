@@ -8,7 +8,7 @@ class PID(object):
 		self.i2c = i2c
 
 	def position(self, position):
-		initial_position = position
+		target_position = position
 		i = 0
 		error_past = 0
 		Integral = 0
@@ -17,7 +17,7 @@ class PID(object):
                 peak_limit = 100
 		while i < 1000:
 			location[i] = self.i2c.getVoltage()
-			error = (location[i] - initial_position)/ initial_position
+			error = (location[i] - target_position)/ target_position
 
 			KP = 10.99
 			KI = 123
