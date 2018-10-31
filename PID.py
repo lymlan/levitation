@@ -17,9 +17,9 @@ class PID(object):
 	    '''
 
 	#checking the reading for errors
-	    if location < self.v_min - 0.5:
-		raise ValueError(location, self.v_min, 'position read as above the maximum value, probably problem with light source.')
-	    operation_range = self.v_max - self.v_min
+		if location < self.v_min - 0.5:
+			raise ValueError(location, self.v_min, 'position read as above the maximum value, probably problem with light source.')
+		operation_range = self.v_max - self.v_min
 	#top location is v_min, bottom location is v_max (because a higher position means a larger shadow on the PV cell.)
 	    normalised_distance_from_top = (location - self.v_min) / operation_range
 	    if normalised_distance_from_top > 1.5:
@@ -28,6 +28,20 @@ class PID(object):
                 normalised_distance_from_top = 1
 	    force = G * normalised_distance_from_top ** 2
     	    self.pwm.DC(force)
+
+			return force
+
+	def logger(timestep, location, force):
+		length = np.transpose(np.linspace(0,999,1000))
+		location = np.transpose(location)
+		myData = [length, location, force]  
+		date = datetime.datetime.now().strftime("%H-%M-%S-%B-%d-%Y")	
+	        filename = './logs/PID-Response-' + date +'.csv'
+                myFile = open(filename, 'w')  
+		with myFile:  
+   			writer = csv.writer(myFile)
+   			writer.writerows(myData)
+
 
 	def position(self, position):
 		target_position = position
@@ -49,7 +63,7 @@ class PID(object):
 			D = KD * V
 
 			P = error * KP
-                        if G != peak_limit:
+            if G != peak_limit:
 			    Integral += error
 			    I = Integral * KI
 
@@ -60,18 +74,12 @@ class PID(object):
 			elif G < 0:
 				G = 0
 
-			self.force_normaliser(location[i], G)
+			force[i] = self.force_normaliser(location[i], G)
 
 			i +=1
 			error  = error_past
+		
+		self.logger(length, location, force)
 
 
-		length = np.transpose(np.linspace(0,999,1000))
-		location = np.transpose(location)
-		myData = [length, location]  
-		date = datetime.datetime.now().strftime("%H-%M-%S-%B-%d-%Y")	
-	        filename = './logs/PID-Response-' + date +'.csv'
-                myFile = open(filename, 'w')  
-		with myFile:  
-   			writer = csv.writer(myFile)
-   			writer.writerows(myData)
+

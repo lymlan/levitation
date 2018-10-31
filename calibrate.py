@@ -51,4 +51,5 @@ if __name__ == '__main__':
 	import i2c
 	import controller
 	import calibrate
-	cal = Calibrate()
+	
+	cal = Calibrate(i2c, pwm)
