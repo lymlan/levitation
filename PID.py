@@ -46,8 +46,8 @@ class PID(object):
 		length = np.transpose(np.linspace(0,999,1000))
 		location = np.transpose(location)
 		myData = [length, location]  
-		date = datetime.datetime.now().strftime("%H:%M-%B-%d-%Y")	
-	        filename = 'PID-Response-' + date +'.csv'
+		date = datetime.datetime.now().strftime("%H-%M-%S-%B-%d-%Y")	
+	        filename = './logs/PID-Response-' + date +'.csv'
                 myFile = open(filename, 'w')  
 		with myFile:  
    			writer = csv.writer(myFile)
