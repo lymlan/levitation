@@ -5,9 +5,12 @@ import numpy as np
 
 class PID(object):
 
-	def __init__(self, pwm, i2c):
+	def __init__(self, pwm, i2c, v_max, v_min):
 		self.pwm = pwm
 		self.i2c = i2c
+		self.v_max = v_max
+		self.v_min = v_min
+
 
 	def position(self, position):
 		target_position = position
@@ -39,9 +42,27 @@ class PID(object):
 				G = peak_limit
 			elif G < 0:
 				G = 0
-			self.pwm.DC(G)
+
+			self.force_normaliser(location[i], G)
+
 			i +=1
 			error  = error_past
+
+		def force_normaliser(location):
+			'''As the attractive force depends on the distance from the magnet, the force should be normalised to compensate. 
+			The force of the electromagnet is dependent on the square of the distance the maximum current should be proportional to the max distance
+			'''
+
+			#checking the reading for errors
+			if location < v_min - 0.5:
+				raise ReadError('position read as above the maximum value, probably problem with light source.')
+			operation_range = v_max - v_min
+			#top location is v_min, bottom location is v_max (because a higher position means a larger shadow on the PV cell.)
+			normalised_distance_from_top = (location - v_min) / operation_range
+			
+			force = G * normalised_distance_from_top ** 2
+			self.pwm.DC(force)
+
 
 		length = np.transpose(np.linspace(0,999,1000))
 		location = np.transpose(location)

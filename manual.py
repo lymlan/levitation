@@ -50,7 +50,7 @@ try:
 			time.sleep(1)
 		elif key == 32: #SPACEBAR
 			location = (v_min + v_max) / 2
-			pid = PID.PID(pwm, i2c)
+			pid = PID.PID(pwm, i2c, v_max, v_min)
 			pid.position(location)
 
 		value = range_check(value)

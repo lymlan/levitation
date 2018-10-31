@@ -1,4 +1,3 @@
-
 import i2c
 import time
 
@@ -9,8 +8,8 @@ class Calibrate(object):
 		self.pwm = pwm
 
 	def setup(self):
-		v_min = self.bottom()
-		v_max = self.top()
+		v_max = self.bottom()
+		v_min = self.top()
 
 		return v_min, v_max
 
