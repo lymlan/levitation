@@ -15,8 +15,7 @@ class Calibrate(object):
 
 	def bottom(self):
 		self.pwm.DC(20)
-		time.sleep(2)
-		v_min = self.i2c.getVoltage()
+		v_min = self.average()
 		self.pwm.DC(0)
 
 		return v_min
@@ -24,10 +23,29 @@ class Calibrate(object):
 	def top(self):
 		self.pwm.DC(100)
 		time.sleep(2)
-		v_min = self.i2c.getVoltage()
+		v_min = self.average()
 		self.pwm.DC(0)
 
 		return v_min
+
+	def average(self):
+		time.sleep(2)
+		v_1 = self.i2c.getVoltage()
+		time.sleep(0.1)
+		v_2 = self.i2c.getVoltage()
+		time.sleep(0.1)
+		v_3 = self.i2c.getVoltage()
+		v_ave = ( v_1 + v_2 + v_3 ) / 3
+
+		max_difference = 0.05
+
+		if ( abs(v_ave - v_1) > max_difference or abs(v_ave - v_2) > max_difference or abs(v_ave - v_2) > max_difference):
+			raise ValueError('Calibration reading too inconsistent')
+
+		return v_ave
+			
+
+
 
 if __name__ == '__main__':
 	import i2c
