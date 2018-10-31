@@ -11,20 +11,23 @@ class PID(object):
 		self.v_max = v_max
 		self.v_min = v_min
 
-	def force_normaliser(location):
-	'''As the attractive force depends on the distance from the magnet, the force should be normalised to compensate. 
-	The force of the electromagnet is dependent on the square of the distance the maximum current should be proportional to the max distance
-	'''
+	def force_normaliser(self, location, G):
+	    '''As the attractive force depends on the distance from the magnet, the force should be normalised to compensate. 
+	    The force of the electromagnet is dependent on the square of the distance the maximum current should be proportional to the max distance
+	    '''
 
 	#checking the reading for errors
-	if location < v_min - 0.5:
-		raise ReadError('position read as above the maximum value, probably problem with light source.')
-	operation_range = v_max - v_min
+	    if location < self.v_min - 0.5:
+		raise ValueError(location, self.v_min, 'position read as above the maximum value, probably problem with light source.')
+	    operation_range = self.v_max - self.v_min
 	#top location is v_min, bottom location is v_max (because a higher position means a larger shadow on the PV cell.)
-	normalised_distance_from_top = (location - v_min) / operation_range
-	
-	force = G * normalised_distance_from_top ** 2
-	self.pwm.DC(force)
+	    normalised_distance_from_top = (location - self.v_min) / operation_range
+	    if normalised_distance_from_top > 1.5:
+                raise ValueError(normalised_distance_from_top, 'NDFT is greater than 1')
+            elif normalised_distance_from_top > 1:
+                normalised_distance_from_top = 1
+	    force = G * normalised_distance_from_top ** 2
+    	    self.pwm.DC(force)
 
 	def position(self, position):
 		target_position = position
@@ -38,9 +41,9 @@ class PID(object):
 			location[i] = self.i2c.getVoltage()
 			error = (location[i] - target_position)/ target_position
 
-			KP = 10.99
-			KI = 123
-			KD = 200
+			KP = 600
+			KI = 0.001
+			KD = 10
 
 			V = error - error_past
 			D = KD * V
