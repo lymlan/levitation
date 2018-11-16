@@ -11,6 +11,7 @@ import time
 import RPi.GPIO as GPIO
 import curses
 import i2c
+import controller
 import calibrate
 import PID
 
@@ -39,10 +40,11 @@ Creates a random genome
 def generate_initial_population():
     print("Generating initial population...\n")
     random.seed()
-    population = np.zeros(POPULATION_SIZE)
+    population = []
     for i in range(POPULATION_SIZE):
+        population.append(i)
         # create a random chromosome with a random gain value
-        population[i] = Chromosome(random.random() * MAX_GAIN_VALUE, random.random() * MAX_GAIN_VALUE, random.random() * MAX_GAIN_VALUE)
+        population[i] = Chromosome(random.random() * MAX_GAIN_VALUE * 1000, random.random() * MAX_GAIN_VALUE, random.random() * MAX_GAIN_VALUE)
     return population
         
 """ 
@@ -71,9 +73,9 @@ Returns the fitness function value of the simulation
 def run_simulation_for_chromosome(population, chromosome): # **MAKE THIS WORK AND DO OTHER IMPORTANT STUFF LIKE LOGGING**
     
     fitness = 0
-    pid = PID.PID(pwm, i2c, v_max, v_min, chomosome.kp, chomosome.ki, chromosome.kd, position) # custom PID for chromosome k values
-    print("\nkp = {}\nki = {}\nkd = {}\n".format(chromosome.kp, chromosome.ki, chromosome.kd))
-    location_data = pid.position(location) # performs PID control and returns location data for ball
+    pid = PID.PID(pwm, i2c, v_max, v_min, position, population[chromosome].kp, population[chromosome].ki, population[chromosome].kd) # custom PID for chromosome k values
+    print("\nkp = {}\nki = {}\nkd = {}\n".format(population[chromosome].kp, population[chromosome].ki, population[chromosome].kd))
+    location_data = pid.position() # performs PID control and returns location data for ball
     
     # logging
     # length = np.transpose(np.linspace(0,999,1000))
@@ -86,8 +88,6 @@ def run_simulation_for_chromosome(population, chromosome): # **MAKE THIS WORK AN
     #   writer = csv.writer(myFile)
     #   writer.writerows(myData)
 
-    value = range_check(value)
-    pwm.DC(value)
 
     fitness += 1
 
@@ -140,8 +140,8 @@ def selection(fitness_values):
 def normListSumTo(L, sumTo=1):
     '''normalize values of a list to make it sum = sumTo'''
 
-    sum = reduce(lambda x,y:x+y, L)
-    return [ x/(sum*1.0)*sumTo for x in L]
+    total = sum(L)
+    return [ x/(total*1.0)*total for x in L]
 
 """
 3b[Crossover] With a crossover probability cross over the parents to form a new offspring (children).
@@ -211,17 +211,12 @@ def generate_new_population(fitness_values, previous_population):
     """
     Perform hybrid elitist selection. Carry the best chromosome over to the new population, unmutated.
     """
-    chromosome = population[max_index_in_list(fitness_values)]
+    chromosome = population[np.argmax(fitness_values)]
     new_population.append(POPULATION_SIZE-1)
     new_population[POPULATION_SIZE-1] = chromosome
     
     return new_population
     
-def max_index_in_list(my_list):
-    max_value = max(my_list)
-    max_index = my_list.index(max_value)
-    return max_index
-
 """
     Main
 
@@ -256,9 +251,6 @@ i2c = i2c.I2C()
 pwm = controller.PWM()
 v_min = v_max = 0
 
-population = generate_initial_population()
-fitness_values = run_simulation(population)
-
 try:
     # screen.addstr('press any key to start')
     # key = 0
@@ -266,10 +258,11 @@ try:
     cal = calibrate.Calibrate(i2c, pwm)
     v_min, v_max = cal.setup()
     position = (v_min + v_max)/2
-    screen.addstr(str(v_max))
+    population = generate_initial_population()
+    fitness_values = run_simulation(population)
     time.sleep(1)
 except Exception as e:
-    print(e)
+    raise ValueError(e)
 
 
 for i in range(MAX_RUNS):
@@ -282,10 +275,10 @@ for i in range(MAX_RUNS):
     print("Maximum fitness of generation {} = {}".format(generation, max_value))
 
     # if the population sucks, DESTROY THE EARTH
-    if max_value < FITNESS_THRESHOLD:
-        print("Population sucked so we're starting with a fresh batch lol")
-        population = generate_initial_population()
-        generation = 1
-        continue
+#    if max_value < FITNESS_THRESHOLD:
+ #       print("Population sucked so we're starting with a fresh batch lol")
+  #      population = generate_initial_population()
+   #     generation = 1
+    #    continue
 
     generation += 1

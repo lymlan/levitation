@@ -5,7 +5,7 @@ import numpy as np
 
 class PID(object):
 
-    def __init__(self, pwm, i2c, v_max, v_min, KP=600, KI=0.001, KD=10):
+    def __init__(self, pwm, i2c, v_max, v_min, position, KP=600, KI=0.001, KD=10):
         self.pwm = pwm
         self.i2c = i2c
         self.v_max = v_max
@@ -13,6 +13,7 @@ class PID(object):
         self.KP = KP    # made these initialized variables so GA can work with PID
         self.KI = KI
         self.KD = KD
+        self.position_target = position
 
     def force_normaliser(self, location, G):
         '''As the attractive force depends on the distance from the magnet, the force should be normalised to compensate. 
@@ -21,30 +22,30 @@ class PID(object):
 
     #checking the reading for errors
         if location < self.v_min - 0.5:
-        raise ValueError(location, self.v_min, 'position read as above the maximum value, probably problem with light source.')
+            raise ValueError(location, self.v_min, 'position read as above the maximum value, probably problem with light source.')
         operation_range = self.v_max - self.v_min
     #top location is v_min, bottom location is v_max (because a higher position means a larger shadow on the PV cell.)
         normalised_distance_from_top = (location - self.v_min) / operation_range
         if normalised_distance_from_top > 1.5:
-                raise ValueError(normalised_distance_from_top, 'NDFT is greater than 1')
-            elif normalised_distance_from_top > 1:
-                normalised_distance_from_top = 1
+            raise ValueError(normalised_distance_from_top, 'NDFT is greater than 1')
+        elif normalised_distance_from_top > 1:
+            normalised_distance_from_top = 1
         force = G * normalised_distance_from_top ** 2
-            self.pwm.DC(force)
+        self.pwm.DC(force)
 
-    def position(self, position):
-        target_position = position
+    def position(self):
+        target_position = self.position_target
         i = 0
         error_past = 0
         Integral = 0
-        location = np.zeros(1000) # for csv data -> will have 1000 datapoints per chromosome
+        location = np.zeros(10000) # for csv data -> will have 1000 datapoints per chromosome
         G = 0
         peak_limit = 100
         
         current_position = self.i2c.getVoltage()
         location[i] = current_position
         
-        while ((current_position > self.v_min) and (i > 3)) and (current_position < self.v_max): # i > 3 ensures code doesn't stop at the start
+        while current_position > self.v_min: # i > 3 ensures code doesn't stop at the start
             try:
                 current_position = self.i2c.getVoltage()
                 location[i] = current_position
@@ -71,6 +72,7 @@ class PID(object):
                 error = error_past
             except Exception as e: # predicting an error if it lasts more than 1000 cycles
                 print(e)
+                return location
 
         return location
 
