@@ -30,6 +30,8 @@ class PID(object):
             raise ValueError(normalised_distance_from_top, 'NDFT is greater than 1')
         elif normalised_distance_from_top > 1:
             normalised_distance_from_top = 1
+
+        #normalised_distance_from_top = 1 # used to disable the force normaliser for testing
         force = G * normalised_distance_from_top ** 2
         self.pwm.DC(force)
 
@@ -38,43 +40,47 @@ class PID(object):
         i = 0
         error_past = 0
         Integral = 0
-        location = np.zeros(10000) # for csv data -> will have 1000 datapoints per chromosome
+        steps = 1000
+        location = np.zeros(steps) # for csv data -> will have 1000 datapoints per chromosome
+        gain = np.zeros(steps)
+        errors = np.zeros(steps)
         G = 0
         peak_limit = 100
         
         current_position = self.i2c.getVoltage()
         location[i] = current_position
         
-        while current_position > self.v_min: # i > 3 ensures code doesn't stop at the start
-            try:
-                current_position = self.i2c.getVoltage()
-                location[i] = current_position
-                error = (current_position - target_position)/ target_position
+        while i < steps: # i > 3 ensures code doesn't stop at the start
+            
+            current_position = self.i2c.getVoltage()
+            location[i] = current_position
+            error = (current_position - target_position)/ target_position
 
-                V = error - error_past
-                D = self.KD * V
+            V = error - error_past
+            D = self.KD * V
 
-                P = error * self.KP
-                if G != peak_limit:
-                    Integral += error
-                I = Integral * self.KI
+            P = error * self.KP
+            if G != peak_limit:
+                Integral += error
+            I = Integral * self.KI
 
-                G = P + I + D
+            G = P + I + D
 
-                if G > peak_limit:
-                    G = peak_limit
-                elif G < 0:
-                    G = 0
+            if G > peak_limit:
+                G = peak_limit
+            elif G < 0:
+                G = 0
 
-                self.force_normaliser(location[i], G)
+            self.force_normaliser(location[i], G)
+            gain[i] = G
+            errors[i] = error
 
-                i +=1
-                error = error_past
-            except Exception as e: # predicting an error if it lasts more than 1000 cycles
-                print(e)
-                return location
+            i +=1
+            error = error_past
 
-        return location
+        print('peak gain in chromosome is {}'.format(max(gain)))
+
+        return errors
 
 #       KP = 600    # Emil's PID parameter values... should probably keep these just in case!
 #       KI = 0.001

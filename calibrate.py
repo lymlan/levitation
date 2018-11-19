@@ -37,10 +37,10 @@ class Calibrate(object):
 		v_3 = self.i2c.getVoltage()
 		v_ave = ( v_1 + v_2 + v_3 ) / 3
 
-		max_difference = 0.05
+		max_difference = 0.02
 
 		if ( abs(v_ave - v_1) > max_difference or abs(v_ave - v_2) > max_difference or abs(v_ave - v_2) > max_difference):
-			raise ValueError('Calibration reading too inconsistent')
+			raise ValueError('Signal to noise ratio too big, try blocking out lightbulbs')
 
 		return v_ave
 			

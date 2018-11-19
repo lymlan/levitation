@@ -54,16 +54,17 @@ returns the fitness value according to the fitness function
 Fitness is how long the ball remains inbetween the top and bottom without touching
 
 """
-def fitness(samples): # **MAKE THIS WORK...**
+def _fitness(samples): # **MAKE THIS WORK...**
     # 1. get top and bottom voltage values (as we already do)
     # 2. measure voltage at every time interval (as we already do)
     # 3. while measured voltage != (top or bottom voltages): keep going, don't cap at 1000 samples (iter ++)
     # 4. when measured voltage == (top of bottom voltages): fitness = number of samples before this happened
     #                                                       this might take a while to get going though...
-    sum = 0
-    for i in range(len(distance_list)):
-        sum = sum + math.fabs(distance_list[i])
-    return 1 /  sum
+    abs_errors = np.absolute(samples)
+    sum_errors = np.sum(abs_errors)
+    fitness = 1 / sum_errors
+    
+    return fitness
         
 """
 Run simulation for a specific chromosome c.
@@ -75,8 +76,12 @@ def run_simulation_for_chromosome(population, chromosome): # **MAKE THIS WORK AN
     fitness = 0
     pid = PID.PID(pwm, i2c, v_max, v_min, position, population[chromosome].kp, population[chromosome].ki, population[chromosome].kd) # custom PID for chromosome k values
     print("\nkp = {}\nki = {}\nkd = {}\n".format(population[chromosome].kp, population[chromosome].ki, population[chromosome].kd))
-    location_data = pid.position() # performs PID control and returns location data for ball
-    
+    errors = pid.position() # performs PID control and returns location data for ball
+    pwm.DC(0)
+
+    fitness = _fitness(errors)
+
+    print('fitness is {}'.format(fitness))
     # logging
     # length = np.transpose(np.linspace(0,999,1000))
     # location = np.transpose(location)
@@ -110,6 +115,7 @@ def run_simulation(population):
     fitness_values = np.zeros(POPULATION_SIZE)
     for chromosome in range(POPULATION_SIZE):
         fitness_values[chromosome] = run_simulation_for_chromosome(population, chromosome)
+        time.sleep(1)
         
     return fitness_values
 
