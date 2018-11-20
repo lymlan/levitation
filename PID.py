@@ -32,10 +32,8 @@ class PID(object):
             normalised_distance_from_top = 1
 
         #normalised_distance_from_top = 1 # used to disable the force normaliser for testing
-        force = G * normalised_distance_from_top ** 3 
+        force = G * normalised_distance_from_top ** 2
         self.pwm.DC(force)
-
-        return force
 
     def position(self):
         target_position = self.position_target
@@ -73,8 +71,8 @@ class PID(object):
             elif G < 0:
                 G = 0
 
-            force = self.force_normaliser(location[i], G)
-            gain[i] = force
+            self.force_normaliser(location[i], G)
+            gain[i] = G
             errors[i] = error
 
             i +=1

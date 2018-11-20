@@ -1,6 +1,5 @@
 """
 Modified GA code from SOURCE
-
 """
 
 import random
@@ -28,14 +27,13 @@ LINE_SMOOTHNESS = .1
 class Chromosome:
     def __init__(self, kp, ki, kd):
         self.kp = kp
-        self.kd = kd
         self.ki = ki
+        self.kd = kd
      
 
 """
 1 [Start] Generate random population of n chromosomes (suitable solutions for the problem)
 Creates a random genome
-
 """
 def generate_initial_population():
     print("Generating initial population...\n")
@@ -50,9 +48,7 @@ def generate_initial_population():
 """ 
 2 [Fitness] Evaluate the fitness f(x) of each chromosome x in the population
 returns the fitness value according to the fitness function
-
 Fitness is how long the ball remains inbetween the top and bottom without touching
-
 """
 def _fitness(samples): # **MAKE THIS WORK...**
     # 1. get top and bottom voltage values (as we already do)
@@ -62,13 +58,12 @@ def _fitness(samples): # **MAKE THIS WORK...**
     #                                                       this might take a while to get going though...
     abs_errors = np.absolute(samples)
     sum_errors = np.sum(abs_errors)
-    fitness = 1 / sum_errors
+    fitness = 1 / sum_errors 
     
     return fitness
         
 """
 Run simulation for a specific chromosome c.
-
 Returns the fitness function value of the simulation
 """
 def run_simulation_for_chromosome(population, chromosome): # **MAKE THIS WORK AND DO OTHER IMPORTANT STUFF LIKE LOGGING**
@@ -111,11 +106,12 @@ def range_check(value):
 """
 Run the simulation for the set of all chromosomes
 """
-def run_simulation(population):
+def run_simulation(population, generation):
     fitness_values = np.zeros(POPULATION_SIZE)
     for chromosome in range(POPULATION_SIZE):
+        print("Generation: {}".format(generation))
         fitness_values[chromosome] = run_simulation_for_chromosome(population, chromosome)
-        time.sleep(1)
+        time.sleep(0.5)
         
     return fitness_values
 
@@ -198,20 +194,29 @@ def mutation(chromosome):
 """
 3 [New population] Create a new population by repeating following steps until the new population is complete
 """
-def generate_new_population(fitness_values, previous_population):
+def generate_new_population(fitness_values, previous_population, generation):
     new_population = []
     print("\nGenerating new population...\n")
-    for i in range(POPULATION_SIZE-1): # saves one space for elitist selection
-        new_population.append(i)
-        # selection
-        parents = selection(fitness_values)
-                
-        # crossover
-        chromosome = crossover(population, parents)
+    with open(filename, "w") as my_file:
+        writer = csv.writer(my_file)
+        for i in range(POPULATION_SIZE-1): # saves one space for elitist selection
+            new_population.append(i)
+            # selection
+            parents = selection(fitness_values)
+                    
+            # crossover
+            chromosome = crossover(population, parents)
 
-        # mutation
-        chromosome = mutation(chromosome)
-        new_population[i] = chromosome
+            # mutation
+            chromosome = mutation(chromosome)
+            new_population[i] = chromosome
+            # log kp, ki, kd, generation, chromosome (relative)
+            kp = population[chromosome].kp
+            ki = population[chromosome].ki
+            kd = population[chromosome].kd
+            my_data = [generation, chromosome, kp, ki, kd, 0]
+            filename = './logs/GA_PID_parameters' + '.csv'
+            writer.writerows(my_data)
     
     
     """
@@ -220,12 +225,27 @@ def generate_new_population(fitness_values, previous_population):
     chromosome = population[np.argmax(fitness_values)]
     new_population.append(POPULATION_SIZE-1)
     new_population[POPULATION_SIZE-1] = chromosome
+        # log kp, ki, kd, generation, chromosome (relative)
+    kp = population[chromosome].kp
+    ki = population[chromosome].ki
+    kd = population[chromosome].kd
+    my_data = [generation, chromosome, kp, ki, kd, 1]
+    filename = './logs/GA_PID_parameters' + '.csv'
+    with open(filename, "w") as my_file:
+        writer = csv.writer(my_file)
+        writer.writerows(my_data)
     
     return new_population
     
+
+def file_len(fname):
+    with open(fname) as f:
+        for i, l in enumerate(f):
+            pass
+    return i + 1
+
 """
     Main
-
     1 [Start] Generate random population of n chromosomes (suitable solutions for the problem)
     2 [Fitness] Evaluate the fitness f(x) of each chromosome x in the population
     3 [New population] Create a new population by repeating following steps until the new population is complete
@@ -263,18 +283,41 @@ try:
 
     cal = calibrate.Calibrate(i2c, pwm)
     v_min, v_max = cal.setup()
-    position = v_max - (v_max - v_min)/3
-    population = generate_initial_population()
+    position = (v_min + 2*v_max)/3
+    filename = './logs/GA_PID_parameters' + '.csv'
+    try:
+        f = file.open(filename)
+        f.close()
+    except FileNotFoundError:
+        print('\nFile does not exist, creating new log file\n')
+        header = ["generation", "chromosome no.", "kp", "ki", "kd", "elite?"]
+        with open(filename, "w") as my_file:
+            writer = csv.writer(my_file)
+            writer.writerows(header)
+    if file_len(filename) > POPULATION_SIZE:
+        with open(filename, "r") as my_file:
+            reader = csv.reader(my_file)
+            generation = reader[-1][0] # final chromosome's generation no. (should be the same for the last 50 lines)
+            population = []
+            for line in reader:
+                kp = line[2]
+                ki = line[3]
+                kd = line[4]
+                chromosome = Chromosome(kp, ki, kd)
+                population.append(chromosome) # population is continued from csv file
+    else:
+        population = generate_initial_population()
+
     fitness_values = run_simulation(population)
     time.sleep(1)
 except Exception as e:
     raise ValueError(e)
 
 
-for i in range(MAX_RUNS):
+for i in range(MAX_RUNS - generation):
     print("Generation {}".format(generation))
-    population = generate_new_population(fitness_values, population)
-    fitness_values = run_simulation(population)
+    population = generate_new_population(fitness_values, population, generation)
+    fitness_values = run_simulation(population, generation)
     
     max_value = max(fitness_values)
     
