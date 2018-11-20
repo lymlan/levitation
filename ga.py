@@ -26,7 +26,7 @@ MAX_GAIN_VALUE = 1
 LINE_SMOOTHNESS = .1
 
 class Chromosome:
-    def __init__(self, kp, kd, ki):
+    def __init__(self, kp, ki, kd):
         self.kp = kp
         self.kd = kd
         self.ki = ki
@@ -44,7 +44,7 @@ def generate_initial_population():
     for i in range(POPULATION_SIZE):
         population.append(i)
         # create a random chromosome with a random gain value
-        population[i] = Chromosome(random.random() * MAX_GAIN_VALUE * 1000, random.random() * MAX_GAIN_VALUE, random.random() * MAX_GAIN_VALUE)
+        population[i] = Chromosome(random.random() * MAX_GAIN_VALUE * 1000, random.random() * MAX_GAIN_VALUE / 1000, random.random() * MAX_GAIN_VALUE)
     return population
         
 """ 
@@ -263,7 +263,7 @@ try:
 
     cal = calibrate.Calibrate(i2c, pwm)
     v_min, v_max = cal.setup()
-    position = (v_min + v_max)/2
+    position = v_max - (v_max - v_min)/3
     population = generate_initial_population()
     fitness_values = run_simulation(population)
     time.sleep(1)
